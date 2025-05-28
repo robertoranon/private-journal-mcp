@@ -18,10 +18,15 @@ function parseArguments(): string {
   
   // If no explicit path, try various fallback locations
   const possiblePaths = [
-    // Try current working directory first
+    // Try current working directory only if it's not root and seems reasonable
     (() => {
       try {
-        return path.join(process.cwd(), '.private-journal');
+        const cwd = process.cwd();
+        // Don't use root directories or other system directories
+        if (cwd === '/' || cwd === 'C:\\' || cwd === '/System' || cwd === '/usr') {
+          return null;
+        }
+        return path.join(cwd, '.private-journal');
       } catch {
         return null;
       }
