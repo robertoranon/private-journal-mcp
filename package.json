@@ -7,6 +7,7 @@
     "private-journal-mcp": "./dist/index.js"
   },
   "scripts": {
+    "prepare": "npm run build",
     "build": "tsc",
     "dev": "tsc --watch",
     "start": "node dist/index.js",
