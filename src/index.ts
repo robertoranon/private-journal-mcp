@@ -9,33 +9,61 @@ import { PrivateJournalServer } from './server';
 function parseArguments(): string {
   const args = process.argv.slice(2);
   
-  // Safely get current working directory with fallbacks
-  let cwd: string;
-  try {
-    cwd = process.cwd();
-  } catch (error) {
-    // If cwd fails, use home directory or /tmp as fallback
-    cwd = process.env.HOME || process.env.USERPROFILE || '/tmp';
-  }
-  
-  let journalPath = path.join(cwd, '.private-journal');
-
+  // Check for explicit journal path argument first
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--journal-path' && i + 1 < args.length) {
-      journalPath = path.resolve(args[i + 1]);
-      break;
+      return path.resolve(args[i + 1]);
     }
   }
+  
+  // If no explicit path, try various fallback locations
+  const possiblePaths = [
+    // Try current working directory first
+    (() => {
+      try {
+        return path.join(process.cwd(), '.private-journal');
+      } catch {
+        return null;
+      }
+    })(),
+    // Try home directory
+    process.env.HOME ? path.join(process.env.HOME, '.private-journal') : null,
+    process.env.USERPROFILE ? path.join(process.env.USERPROFILE, '.private-journal') : null,
+    // Try temp directory as last resort
+    path.join('/tmp', '.private-journal'),
+    // On Windows, try temp directory
+    process.env.TEMP ? path.join(process.env.TEMP, '.private-journal') : null,
+    process.env.TMP ? path.join(process.env.TMP, '.private-journal') : null,
+  ].filter(Boolean) as string[];
 
-  return journalPath;
+  return possiblePaths[0] || path.join('/tmp', '.private-journal');
 }
 
 async function main(): Promise<void> {
   try {
-    const journalPath = parseArguments();
+    // Log environment info for debugging
+    console.error('=== Private Journal MCP Server Debug Info ===');
+    console.error(`Node.js version: ${process.version}`);
+    console.error(`Platform: ${process.platform}`);
+    console.error(`Architecture: ${process.arch}`);
     
-    // Log the journal path to stderr for debugging (won't interfere with MCP protocol)
-    console.error(`Private journal will be stored at: ${journalPath}`);
+    try {
+      console.error(`Current working directory: ${process.cwd()}`);
+    } catch (error) {
+      console.error(`Failed to get current working directory: ${error}`);
+    }
+    
+    console.error(`Environment variables:`);
+    console.error(`  HOME: ${process.env.HOME || 'undefined'}`);
+    console.error(`  USERPROFILE: ${process.env.USERPROFILE || 'undefined'}`);
+    console.error(`  TEMP: ${process.env.TEMP || 'undefined'}`);
+    console.error(`  TMP: ${process.env.TMP || 'undefined'}`);
+    console.error(`  USER: ${process.env.USER || 'undefined'}`);
+    console.error(`  USERNAME: ${process.env.USERNAME || 'undefined'}`);
+    
+    const journalPath = parseArguments();
+    console.error(`Selected journal path: ${journalPath}`);
+    console.error('===============================================');
     
     const server = new PrivateJournalServer(journalPath);
     await server.run();

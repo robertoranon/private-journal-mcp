@@ -65,7 +65,11 @@ ${content}
     try {
       await fs.access(dirPath);
     } catch (error) {
-      await fs.mkdir(dirPath, { recursive: true });
+      try {
+        await fs.mkdir(dirPath, { recursive: true });
+      } catch (mkdirError) {
+        throw new Error(`Failed to create journal directory at ${dirPath}: ${mkdirError instanceof Error ? mkdirError.message : mkdirError}`);
+      }
     }
   }
 }

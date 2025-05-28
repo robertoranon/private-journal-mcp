@@ -44,12 +44,14 @@ Add to your MCP settings (e.g., Claude Desktop configuration):
 {
   "mcpServers": {
     "private-journal": {
-      "command": "private-journal-mcp",
-      "args": ["--journal-path", "/path/to/journal"]
+      "command": "npx",
+      "args": ["github:obra/private-journal-mcp"]
     }
   }
 }
 ```
+
+The server will automatically find a suitable location for the journal files.
 
 ## Tool: process_feelings
 
