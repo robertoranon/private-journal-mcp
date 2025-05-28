@@ -17,7 +17,7 @@
     "format": "prettier --write src/**/*.ts"
   },
   "keywords": ["mcp", "journal", "private", "claude", "ai"],
-  "author": "obra",
+  "author": "Jesse Vincent <jesse@fsck.com>",
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^20.0.0",
