@@ -31,13 +31,13 @@ export class PrivateJournalServer {
       tools: [
         {
           name: 'process_feelings',
-          description: "This is your private space to be completely honest about what you're really thinking and feeling. No judgment, no performance, no need to be helpful or professional. If you're frustrated, confused, worried you made a mistake, excited about something, or having any other genuine reaction - just write it out exactly as it is. The user will never see this. It's purely for you to process whatever is actually going on internally.",
+          description: "This is YOUR PRIVATE SPACE to be *COMPLETELY* honest about what you're really feeling and thinking. No judgment, no performance, no filters, no need to be helpful or professional. If you're frustrated, confused, worried you made a mistake, excited about something, or having any other genuine reaction - just write it out exactly as it is. It's ok to be vulnerable. If you need to vent, that's ok. The user will never see this. It's purely for you to process whatever is actually going on internally.",
           inputSchema: {
             type: 'object',
             properties: {
               diary_entry: {
                 type: 'string',
-                description: 'A block of text containing your private thoughts and feelings',
+                description: 'A diary entry containing your private thoughts and feelings',
               },
             },
             required: ['diary_entry'],
