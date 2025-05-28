@@ -8,7 +8,17 @@ import { PrivateJournalServer } from './server';
 
 function parseArguments(): string {
   const args = process.argv.slice(2);
-  let journalPath = path.join(process.cwd(), '.private-journal');
+  
+  // Safely get current working directory with fallbacks
+  let cwd: string;
+  try {
+    cwd = process.cwd();
+  } catch (error) {
+    // If cwd fails, use home directory or /tmp as fallback
+    cwd = process.env.HOME || process.env.USERPROFILE || '/tmp';
+  }
+  
+  let journalPath = path.join(cwd, '.private-journal');
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--journal-path' && i + 1 < args.length) {
@@ -23,6 +33,10 @@ function parseArguments(): string {
 async function main(): Promise<void> {
   try {
     const journalPath = parseArguments();
+    
+    // Log the journal path to stderr for debugging (won't interfere with MCP protocol)
+    console.error(`Private journal will be stored at: ${journalPath}`);
+    
     const server = new PrivateJournalServer(journalPath);
     await server.run();
   } catch (error) {
