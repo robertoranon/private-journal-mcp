@@ -38,6 +38,12 @@ private-journal-mcp --journal-path /path/to/my/journal
 
 ### MCP Configuration
 
+#### Claude Code (One-liner)
+```bash
+claude mcp add-json private-journal '{"type":"stdio","command":"npx","args":["github:obra/private-journal-mcp"]}' -s user
+```
+
+#### Manual Configuration
 Add to your MCP settings (e.g., Claude Desktop configuration):
 
 ```json
