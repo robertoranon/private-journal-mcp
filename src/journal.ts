@@ -55,7 +55,11 @@ export class JournalManager {
       day: 'numeric' 
     });
 
-    return `# ${timeDisplay} - ${dateDisplay}
+    return `---
+title: "${timeDisplay} - ${dateDisplay}"
+date: ${timestamp.toISOString()}
+timestamp: ${timestamp.getTime()}
+---
 
 ${content}
 `;

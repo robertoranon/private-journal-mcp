@@ -68,10 +68,22 @@ describe('JournalManager', () => {
     
     const fileContent = await fs.readFile(filePath, 'utf8');
     
-    expect(fileContent).toContain('# ');
+    expect(fileContent).toContain('---');
+    expect(fileContent).toContain('title: "');
+    expect(fileContent).toContain('date: ');
+    expect(fileContent).toContain('timestamp: ');
     expect(fileContent).toContain(' - ');
     expect(fileContent).toContain(content);
-    expect(fileContent.split('\n')).toHaveLength(4); // header, empty line, content, final newline
+    
+    // Check YAML frontmatter structure
+    const lines = fileContent.split('\n');
+    expect(lines[0]).toBe('---');
+    expect(lines[1]).toMatch(/^title: ".*"$/);
+    expect(lines[2]).toMatch(/^date: \d{4}-\d{2}-\d{2}T/);
+    expect(lines[3]).toMatch(/^timestamp: \d+$/);
+    expect(lines[4]).toBe('---');
+    expect(lines[5]).toBe('');
+    expect(lines[6]).toBe(content);
   });
 
   test('handles multiple entries on same day', async () => {
@@ -102,8 +114,11 @@ describe('JournalManager', () => {
     const filePath = path.join(dayDir, files[0]);
     const fileContent = await fs.readFile(filePath, 'utf8');
     
-    expect(fileContent).toContain('# ');
+    expect(fileContent).toContain('---');
+    expect(fileContent).toContain('title: "');
     expect(fileContent).toContain(' - ');
+    expect(fileContent).toMatch(/date: \d{4}-\d{2}-\d{2}T/);
+    expect(fileContent).toMatch(/timestamp: \d+/);
   });
 
   test('handles large content', async () => {
