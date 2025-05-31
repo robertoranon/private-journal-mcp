@@ -5,6 +5,7 @@
 
 import * as path from 'path';
 import { PrivateJournalServer } from './server';
+import { resolveProjectJournalPath } from './paths';
 
 function parseArguments(): string {
   const args = process.argv.slice(2);
@@ -16,32 +17,8 @@ function parseArguments(): string {
     }
   }
   
-  // If no explicit path, try various fallback locations
-  const possiblePaths = [
-    // Try current working directory only if it's not root and seems reasonable
-    (() => {
-      try {
-        const cwd = process.cwd();
-        // Don't use root directories or other system directories
-        if (cwd === '/' || cwd === 'C:\\' || cwd === '/System' || cwd === '/usr') {
-          return null;
-        }
-        return path.join(cwd, '.private-journal');
-      } catch {
-        return null;
-      }
-    })(),
-    // Try home directory
-    process.env.HOME ? path.join(process.env.HOME, '.private-journal') : null,
-    process.env.USERPROFILE ? path.join(process.env.USERPROFILE, '.private-journal') : null,
-    // Try temp directory as last resort
-    path.join('/tmp', '.private-journal'),
-    // On Windows, try temp directory
-    process.env.TEMP ? path.join(process.env.TEMP, '.private-journal') : null,
-    process.env.TMP ? path.join(process.env.TMP, '.private-journal') : null,
-  ].filter(Boolean) as string[];
-
-  return possiblePaths[0] || path.join('/tmp', '.private-journal');
+  // Use shared path resolution logic
+  return resolveProjectJournalPath();
 }
 
 async function main(): Promise<void> {

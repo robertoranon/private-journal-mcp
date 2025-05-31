@@ -4,12 +4,15 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { JournalEntry } from './types';
+import { resolveUserJournalPath } from './paths';
 
 export class JournalManager {
-  private journalPath: string;
+  private projectJournalPath: string;
+  private userJournalPath: string;
 
-  constructor(journalPath: string) {
-    this.journalPath = journalPath;
+  constructor(projectJournalPath: string, userJournalPath?: string) {
+    this.projectJournalPath = projectJournalPath;
+    this.userJournalPath = userJournalPath || resolveUserJournalPath();
   }
 
   async writeEntry(content: string): Promise<void> {
@@ -17,7 +20,7 @@ export class JournalManager {
     const dateString = this.formatDate(timestamp);
     const timeString = this.formatTimestamp(timestamp);
     
-    const dayDirectory = path.join(this.journalPath, dateString);
+    const dayDirectory = path.join(this.projectJournalPath, dateString);
     const fileName = `${timeString}.md`;
     const filePath = path.join(dayDirectory, fileName);
 
@@ -35,17 +38,26 @@ export class JournalManager {
     world_knowledge?: string;
   }): Promise<void> {
     const timestamp = new Date();
-    const dateString = this.formatDate(timestamp);
-    const timeString = this.formatTimestamp(timestamp);
     
-    const dayDirectory = path.join(this.journalPath, dateString);
-    const fileName = `${timeString}.md`;
-    const filePath = path.join(dayDirectory, fileName);
-
-    await this.ensureDirectoryExists(dayDirectory);
+    // Split thoughts into project-local and user-global
+    const projectThoughts = { project_notes: thoughts.project_notes };
+    const userThoughts = {
+      feelings: thoughts.feelings,
+      user_context: thoughts.user_context,
+      technical_insights: thoughts.technical_insights,
+      world_knowledge: thoughts.world_knowledge
+    };
     
-    const formattedEntry = this.formatThoughts(thoughts, timestamp);
-    await fs.writeFile(filePath, formattedEntry, 'utf8');
+    // Write project notes to project directory
+    if (projectThoughts.project_notes) {
+      await this.writeThoughtsToLocation(projectThoughts, timestamp, this.projectJournalPath);
+    }
+    
+    // Write user thoughts to user directory
+    const hasUserContent = Object.values(userThoughts).some(value => value !== undefined);
+    if (hasUserContent) {
+      await this.writeThoughtsToLocation(userThoughts, timestamp, this.userJournalPath);
+    }
   }
 
   private formatDate(date: Date): string {
@@ -84,6 +96,30 @@ timestamp: ${timestamp.getTime()}
 
 ${content}
 `;
+  }
+
+  private async writeThoughtsToLocation(
+    thoughts: {
+      feelings?: string;
+      project_notes?: string;
+      user_context?: string;
+      technical_insights?: string;
+      world_knowledge?: string;
+    },
+    timestamp: Date,
+    basePath: string
+  ): Promise<void> {
+    const dateString = this.formatDate(timestamp);
+    const timeString = this.formatTimestamp(timestamp);
+    
+    const dayDirectory = path.join(basePath, dateString);
+    const fileName = `${timeString}.md`;
+    const filePath = path.join(dayDirectory, fileName);
+
+    await this.ensureDirectoryExists(dayDirectory);
+    
+    const formattedEntry = this.formatThoughts(thoughts, timestamp);
+    await fs.writeFile(filePath, formattedEntry, 'utf8');
   }
 
   private formatThoughts(thoughts: {
