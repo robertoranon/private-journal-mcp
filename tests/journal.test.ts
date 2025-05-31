@@ -135,4 +135,55 @@ describe('JournalManager', () => {
     const fileContent = await fs.readFile(filePath, 'utf8');
     expect(fileContent).toContain(content);
   });
+
+  test('writes thoughts to correct file structure with sections', async () => {
+    const thoughts = {
+      feelings: 'I feel great about this feature',
+      project_notes: 'The architecture is solid',
+      technical_insights: 'TypeScript interfaces are powerful'
+    };
+    
+    await journalManager.writeThoughts(thoughts);
+
+    const today = new Date();
+    const dateString = getFormattedDate(today);
+    const dayDir = path.join(tempDir, dateString);
+    
+    const files = await fs.readdir(dayDir);
+    expect(files).toHaveLength(1);
+    
+    const fileName = files[0];
+    expect(fileName).toMatch(/^\d{2}-\d{2}-\d{2}-\d{6}\.md$/);
+    
+    const filePath = path.join(dayDir, fileName);
+    const fileContent = await fs.readFile(filePath, 'utf8');
+    
+    expect(fileContent).toContain('## Feelings');
+    expect(fileContent).toContain('I feel great about this feature');
+    expect(fileContent).toContain('## Project Notes');
+    expect(fileContent).toContain('The architecture is solid');
+    expect(fileContent).toContain('## Technical Insights');
+    expect(fileContent).toContain('TypeScript interfaces are powerful');
+  });
+
+  test('handles thoughts with only one section', async () => {
+    const thoughts = {
+      world_knowledge: 'Learned something interesting about databases'
+    };
+    
+    await journalManager.writeThoughts(thoughts);
+
+    const today = new Date();
+    const dateString = getFormattedDate(today);
+    const dayDir = path.join(tempDir, dateString);
+    const files = await fs.readdir(dayDir);
+    const filePath = path.join(dayDir, files[0]);
+    
+    const fileContent = await fs.readFile(filePath, 'utf8');
+    
+    expect(fileContent).toContain('## World Knowledge');
+    expect(fileContent).toContain('Learned something interesting about databases');
+    expect(fileContent).not.toContain('## Feelings');
+    expect(fileContent).not.toContain('## Project Notes');
+  });
 });
