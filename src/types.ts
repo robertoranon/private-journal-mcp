@@ -14,3 +14,11 @@ export interface ServerConfig {
 export interface ProcessFeelingsRequest {
   diary_entry: string;
 }
+
+export interface ProcessThoughtsRequest {
+  feelings?: string;
+  project_notes?: string;
+  user_context?: string;
+  technical_insights?: string;
+  world_knowledge?: string;
+}
