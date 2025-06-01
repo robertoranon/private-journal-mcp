@@ -178,6 +178,8 @@ This enables Claude to build persistent memory across conversations, leading to 
 
 Jesse Vincent <jesse@fsck.com>
 
+Read more about the motivation and design in the [blog post](https://blog.fsck.com/2025/05/28/dear-diary-the-user-asked-me-if-im-alive/).
+
 ## License
 
 MIT
