@@ -5,14 +5,17 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { JournalEntry } from './types';
 import { resolveUserJournalPath } from './paths';
+import { EmbeddingService, EmbeddingData } from './embeddings';
 
 export class JournalManager {
   private projectJournalPath: string;
   private userJournalPath: string;
+  private embeddingService: EmbeddingService;
 
   constructor(projectJournalPath: string, userJournalPath?: string) {
     this.projectJournalPath = projectJournalPath;
     this.userJournalPath = userJournalPath || resolveUserJournalPath();
+    this.embeddingService = EmbeddingService.getInstance();
   }
 
   async writeEntry(content: string): Promise<void> {
@@ -28,6 +31,9 @@ export class JournalManager {
     
     const formattedEntry = this.formatEntry(content, timestamp);
     await fs.writeFile(filePath, formattedEntry, 'utf8');
+
+    // Generate and save embedding
+    await this.generateEmbeddingForEntry(filePath, formattedEntry, timestamp);
   }
 
   async writeThoughts(thoughts: {
@@ -120,6 +126,9 @@ ${content}
     
     const formattedEntry = this.formatThoughts(thoughts, timestamp);
     await fs.writeFile(filePath, formattedEntry, 'utf8');
+
+    // Generate and save embedding
+    await this.generateEmbeddingForEntry(filePath, formattedEntry, timestamp);
   }
 
   private formatThoughts(thoughts: {
@@ -171,6 +180,98 @@ timestamp: ${timestamp.getTime()}
 
 ${sections.join('\n\n')}
 `;
+  }
+
+  private async generateEmbeddingForEntry(
+    filePath: string,
+    content: string,
+    timestamp: Date
+  ): Promise<void> {
+    try {
+      const { text, sections } = this.embeddingService.extractSearchableText(content);
+      
+      if (text.trim().length === 0) {
+        return; // Skip empty entries
+      }
+
+      const embedding = await this.embeddingService.generateEmbedding(text);
+      
+      const embeddingData: EmbeddingData = {
+        embedding,
+        text,
+        sections,
+        timestamp: timestamp.getTime(),
+        path: filePath
+      };
+
+      await this.embeddingService.saveEmbedding(filePath, embeddingData);
+    } catch (error) {
+      console.error(`Failed to generate embedding for ${filePath}:`, error);
+      // Don't throw - embedding failure shouldn't prevent journal writing
+    }
+  }
+
+  async generateMissingEmbeddings(): Promise<number> {
+    let count = 0;
+    const paths = [this.projectJournalPath, this.userJournalPath];
+    
+    for (const basePath of paths) {
+      try {
+        const dayDirs = await fs.readdir(basePath);
+        
+        for (const dayDir of dayDirs) {
+          const dayPath = path.join(basePath, dayDir);
+          const stat = await fs.stat(dayPath);
+          
+          if (!stat.isDirectory() || !dayDir.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            continue;
+          }
+
+          const files = await fs.readdir(dayPath);
+          const mdFiles = files.filter(file => file.endsWith('.md'));
+
+          for (const mdFile of mdFiles) {
+            const mdPath = path.join(dayPath, mdFile);
+            const embeddingPath = mdPath.replace(/\.md$/, '.embedding');
+            
+            try {
+              await fs.access(embeddingPath);
+              // Embedding already exists, skip
+            } catch {
+              // Generate missing embedding
+              console.error(`Generating missing embedding for ${mdPath}`);
+              const content = await fs.readFile(mdPath, 'utf8');
+              const timestamp = this.extractTimestampFromPath(mdPath) || new Date();
+              await this.generateEmbeddingForEntry(mdPath, content, timestamp);
+              count++;
+            }
+          }
+        }
+      } catch (error) {
+        if ((error as any)?.code !== 'ENOENT') {
+          console.error(`Failed to scan ${basePath} for missing embeddings:`, error);
+        }
+      }
+    }
+    
+    return count;
+  }
+
+  private extractTimestampFromPath(filePath: string): Date | null {
+    const filename = path.basename(filePath, '.md');
+    const match = filename.match(/^(\d{2})-(\d{2})-(\d{2})-\d{6}$/);
+    
+    if (!match) return null;
+    
+    const [, hours, minutes, seconds] = match;
+    const dirName = path.basename(path.dirname(filePath));
+    const dateMatch = dirName.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    
+    if (!dateMatch) return null;
+    
+    const [, year, month, day] = dateMatch;
+    return new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 
+                   parseInt(hours), parseInt(minutes), parseInt(seconds));
   }
 
   private async ensureDirectoryExists(dirPath: string): Promise<void> {

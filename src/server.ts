@@ -9,13 +9,16 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import { JournalManager } from './journal';
 import { ProcessFeelingsRequest, ProcessThoughtsRequest } from './types';
+import { SearchService } from './search';
 
 export class PrivateJournalServer {
   private server: Server;
   private journalManager: JournalManager;
+  private searchService: SearchService;
 
   constructor(journalPath: string) {
     this.journalManager = new JournalManager(journalPath);
+    this.searchService = new SearchService(journalPath);
     this.server = new Server(
       {
         name: 'private-journal-mcp',
@@ -54,6 +57,76 @@ export class PrivateJournalServer {
               world_knowledge: {
                 type: 'string',
                 description: "Your PRIVATE LEARNING JOURNAL for everything else that's interesting or useful. Domain knowledge, surprising facts, connections between ideas, insights about how systems work, or anything that expands your understanding of the world. Capture it while it's vivid. Nobody but you will ever see this.",
+              },
+            },
+            required: [],
+          },
+        },
+        {
+          name: 'search_journal',
+          description: "Search through your private journal entries using natural language queries. Returns semantically similar entries ranked by relevance.",
+          inputSchema: {
+            type: 'object',
+            properties: {
+              query: {
+                type: 'string',
+                description: "Natural language search query (e.g., 'times I felt frustrated with TypeScript', 'insights about Jesse's preferences', 'lessons about async patterns')",
+              },
+              limit: {
+                type: 'number',
+                description: "Maximum number of results to return (default: 10)",
+                default: 10,
+              },
+              type: {
+                type: 'string',
+                enum: ['project', 'user', 'both'],
+                description: "Search in project-specific notes, user-global notes, or both (default: both)",
+                default: 'both',
+              },
+              sections: {
+                type: 'array',
+                items: { type: 'string' },
+                description: "Filter by section types (e.g., ['feelings', 'technical_insights'])",
+              },
+            },
+            required: ['query'],
+          },
+        },
+        {
+          name: 'read_journal_entry',
+          description: "Read the full content of a specific journal entry by file path.",
+          inputSchema: {
+            type: 'object',
+            properties: {
+              path: {
+                type: 'string',
+                description: "File path to the journal entry (from search results)",
+              },
+            },
+            required: ['path'],
+          },
+        },
+        {
+          name: 'list_recent_entries',
+          description: "Get recent journal entries in chronological order.",
+          inputSchema: {
+            type: 'object',
+            properties: {
+              limit: {
+                type: 'number',
+                description: "Maximum number of entries to return (default: 10)",
+                default: 10,
+              },
+              type: {
+                type: 'string',
+                enum: ['project', 'user', 'both'],
+                description: "List project-specific notes, user-global notes, or both (default: both)",
+                default: 'both',
+              },
+              days: {
+                type: 'number',
+                description: "Number of days back to search (default: 30)",
+                default: 30,
               },
             },
             required: [],
@@ -116,11 +189,118 @@ export class PrivateJournalServer {
         }
       }
 
+      if (request.params.name === 'search_journal') {
+        if (!args || typeof args.query !== 'string') {
+          throw new Error('query is required and must be a string');
+        }
+
+        const options = {
+          limit: typeof args.limit === 'number' ? args.limit : 10,
+          type: typeof args.type === 'string' ? args.type as 'project' | 'user' | 'both' : 'both',
+          sections: Array.isArray(args.sections) ? args.sections.filter(s => typeof s === 'string') : undefined,
+        };
+
+        try {
+          const results = await this.searchService.search(args.query, options);
+          return {
+            content: [
+              {
+                type: 'text',
+                text: results.length > 0 
+                  ? `Found ${results.length} relevant entries:\n\n${results.map((result, i) => 
+                      `${i + 1}. [Score: ${result.score.toFixed(3)}] ${new Date(result.timestamp).toLocaleDateString()} (${result.type})\n` +
+                      `   Sections: ${result.sections.join(', ')}\n` +
+                      `   Path: ${result.path}\n` +
+                      `   Excerpt: ${result.excerpt}\n`
+                    ).join('\n')}`
+                  : 'No relevant entries found.',
+              },
+            ],
+          };
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+          throw new Error(`Failed to search journal: ${errorMessage}`);
+        }
+      }
+
+      if (request.params.name === 'read_journal_entry') {
+        if (!args || typeof args.path !== 'string') {
+          throw new Error('path is required and must be a string');
+        }
+
+        try {
+          const content = await this.searchService.readEntry(args.path);
+          if (content === null) {
+            throw new Error('Entry not found');
+          }
+          return {
+            content: [
+              {
+                type: 'text',
+                text: content,
+              },
+            ],
+          };
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+          throw new Error(`Failed to read entry: ${errorMessage}`);
+        }
+      }
+
+      if (request.params.name === 'list_recent_entries') {
+        const days = typeof args?.days === 'number' ? args.days : 30;
+        const limit = typeof args?.limit === 'number' ? args.limit : 10;
+        const type = typeof args?.type === 'string' ? args.type as 'project' | 'user' | 'both' : 'both';
+
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - days);
+
+        const options = {
+          limit,
+          type,
+          dateRange: { start: startDate }
+        };
+
+        try {
+          const results = await this.searchService.listRecent(options);
+          return {
+            content: [
+              {
+                type: 'text',
+                text: results.length > 0 
+                  ? `Recent entries (last ${days} days):\n\n${results.map((result, i) => 
+                      `${i + 1}. ${new Date(result.timestamp).toLocaleDateString()} (${result.type})\n` +
+                      `   Sections: ${result.sections.join(', ')}\n` +
+                      `   Path: ${result.path}\n` +
+                      `   Excerpt: ${result.excerpt}\n`
+                    ).join('\n')}`
+                  : `No entries found in the last ${days} days.`,
+              },
+            ],
+          };
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+          throw new Error(`Failed to list recent entries: ${errorMessage}`);
+        }
+      }
+
       throw new Error(`Unknown tool: ${request.params.name}`);
     });
   }
 
   async run(): Promise<void> {
+    // Generate missing embeddings on startup
+    try {
+      console.error('Checking for missing embeddings...');
+      const count = await this.journalManager.generateMissingEmbeddings();
+      if (count > 0) {
+        console.error(`Generated embeddings for ${count} existing journal entries.`);
+      }
+    } catch (error) {
+      console.error('Failed to generate missing embeddings on startup:', error);
+      // Don't fail startup if embedding generation fails
+    }
+
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
   }

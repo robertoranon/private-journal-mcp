@@ -47,17 +47,35 @@ This is an MCP (Model Context Protocol) server that provides Claude with private
 - **MCP Tool Pattern**: Single tool registration with schema validation and error handling
 
 **File Organization:**
-- Journal entries stored in `.private-journal/` with daily subdirectories
+- **Project journals**: `.private-journal/` in project root for project-specific notes
+- **Personal journals**: `~/.private-journal/` for cross-project personal thoughts  
+- **Daily structure**: `YYYY-MM-DD/HH-MM-SS-μμμμμμ.md` with microsecond precision
+- **Search index**: `.embedding` files alongside each journal entry for semantic search
 - TypeScript compilation to `dist/` for production
 - Jest tests in `tests/` directory with comprehensive file system mocking
 
 ## MCP Integration Details
 
-The server provides one tool: `process_feelings` which accepts a `diary_entry` string parameter. The tool description emphasizes complete privacy and emotional honesty for Claude's internal processing.
+The server provides comprehensive journaling and search capabilities through these tools:
+
+**Core Journaling:**
+- `process_thoughts` - Multi-section private journaling with categories for feelings, project notes, user context, technical insights, and world knowledge
+
+**Search & Retrieval:**
+- `search_journal` - Natural language semantic search across all journal entries using local AI embeddings
+- `read_journal_entry` - Read full content of specific entries by file path
+- `list_recent_entries` - Browse recent entries chronologically with date filtering
+
+**Key Features:**
+- **Dual Storage**: Project notes stored locally with codebase, personal thoughts in user's home directory
+- **Local AI Search**: Uses @xenova/transformers for semantic understanding without external API calls
+- **Automatic Indexing**: Embeddings generated automatically for all entries on first startup and ongoing writes
+- **Privacy First**: All processing happens locally, no data leaves your machine
 
 ## Testing Approach
 
-- Uses Jest with ts-jest preset
-- Tests focus on file system operations, timestamp formatting, and directory creation
+- Uses Jest with ts-jest preset and mocked transformers library for embedding tests
+- Tests cover file system operations, timestamp formatting, directory creation, and search functionality
 - Temporary directories created/cleaned for each test to ensure isolation
-- Coverage tracking specifically for core journal functionality (`src/journal.ts`, `src/types.ts`)
+- Coverage tracking for core functionality (`src/journal.ts`, `src/types.ts`, `src/paths.ts`, `src/embeddings.ts`, `src/search.ts`)
+- Comprehensive embedding and search test suite with proper mocking for CI/CD environments

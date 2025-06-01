@@ -1,6 +1,7 @@
 // ABOUTME: Unit tests for journal writing functionality
 // ABOUTME: Tests file system operations, timestamps, and formatting
 
+
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
@@ -52,10 +53,14 @@ describe('JournalManager', () => {
     const dayDir = path.join(projectTempDir, dateString);
     
     const files = await fs.readdir(dayDir);
-    expect(files).toHaveLength(1);
+    expect(files).toHaveLength(2); // .md and .embedding files
     
-    const fileName = files[0];
-    expect(fileName).toMatch(/^\d{2}-\d{2}-\d{2}-\d{6}\.md$/);
+    const mdFile = files.find(f => f.endsWith('.md'));
+    const embeddingFile = files.find(f => f.endsWith('.embedding'));
+    
+    expect(mdFile).toBeDefined();
+    expect(embeddingFile).toBeDefined();
+    expect(mdFile).toMatch(/^\d{2}-\d{2}-\d{2}-\d{6}\.md$/);
   });
 
   test('creates directory structure automatically', async () => {
@@ -80,7 +85,8 @@ describe('JournalManager', () => {
     const dateString = getFormattedDate(today);
     const dayDir = path.join(projectTempDir, dateString);
     const files = await fs.readdir(dayDir);
-    const filePath = path.join(dayDir, files[0]);
+    const mdFile = files.find(f => f.endsWith('.md'));
+    const filePath = path.join(dayDir, mdFile!);
     
     const fileContent = await fs.readFile(filePath, 'utf8');
     
@@ -111,8 +117,10 @@ describe('JournalManager', () => {
     const dayDir = path.join(projectTempDir, dateString);
     const files = await fs.readdir(dayDir);
     
-    expect(files).toHaveLength(2);
-    expect(files[0]).not.toEqual(files[1]);
+    expect(files).toHaveLength(4); // 2 .md files + 2 .embedding files
+    const mdFiles = files.filter(f => f.endsWith('.md'));
+    expect(mdFiles).toHaveLength(2);
+    expect(mdFiles[0]).not.toEqual(mdFiles[1]);
   });
 
   test('handles empty content', async () => {
@@ -125,7 +133,7 @@ describe('JournalManager', () => {
     const dayDir = path.join(projectTempDir, dateString);
     const files = await fs.readdir(dayDir);
     
-    expect(files).toHaveLength(1);
+    expect(files).toHaveLength(2); // .md and .embedding files
     
     const filePath = path.join(dayDir, files[0]);
     const fileContent = await fs.readFile(filePath, 'utf8');

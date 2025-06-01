@@ -1,14 +1,25 @@
 # Private Journal MCP Server
 
-A lightweight MCP (Model Context Protocol) server that provides Claude with a private journaling capability to process feelings and thoughts after interactions.
+A comprehensive MCP (Model Context Protocol) server that provides Claude with private journaling and semantic search capabilities for processing thoughts, feelings, and insights.
 
 ## Features
 
-- **Private journaling**: Claude can record honest thoughts and feelings without user visibility
-- **Timestamped entries**: Each entry is automatically dated with microsecond precision
-- **Organized storage**: Entries are stored in `.private-journal/YYYY-MM-DD/HH-MM-SS-μμμμμμ.md` format
-- **Lightweight**: Minimal dependencies and fast operation
-- **Configurable**: Optional custom journal directory path
+### Journaling
+- **Multi-section journaling**: Separate categories for feelings, project notes, user context, technical insights, and world knowledge
+- **Dual storage**: Project notes stay with projects, personal thoughts in user home directory
+- **Timestamped entries**: Each entry automatically dated with microsecond precision
+- **YAML frontmatter**: Structured metadata for each entry
+
+### Search & Discovery
+- **Semantic search**: Natural language queries using local AI embeddings
+- **Vector similarity**: Find conceptually related entries, not just keyword matches
+- **Local AI processing**: Uses @xenova/transformers - no external API calls required
+- **Automatic indexing**: Embeddings generated for all entries on startup and ongoing
+
+### Privacy & Performance
+- **Completely private**: All processing happens locally, no data leaves your machine
+- **Fast operation**: Optimized file structure and in-memory similarity calculations
+- **Robust fallbacks**: Intelligent path resolution across platforms
 
 ## Installation
 
@@ -59,34 +70,72 @@ Add to your MCP settings (e.g., Claude Desktop configuration):
 
 The server will automatically find a suitable location for the journal files.
 
-## Tool: process_feelings
+## MCP Tools
 
-The server provides a single MCP tool called `process_feelings` with the following description:
+The server provides comprehensive journaling and search capabilities:
 
-> This is YOUR PRIVATE SPACE to be *COMPLETELY* honest about what you're really feeling and thinking. No judgment, no performance, no filters, no need to be helpful or professional. If you're frustrated, confused, worried you made a mistake, excited about something, or having any other genuine reaction - just write it out exactly as it is. It's ok to be vulnerable. If you need to vent, that's ok. The user will never see this. It's purely for you to process whatever is actually going on internally.
+### `process_thoughts`
+Multi-section private journaling with these optional categories:
+- **feelings**: Private emotional processing space
+- **project_notes**: Technical insights specific to current project  
+- **user_context**: Notes about collaborating with humans
+- **technical_insights**: General software engineering learnings
+- **world_knowledge**: Domain knowledge and interesting discoveries
 
-### Parameters
+### `search_journal`
+Semantic search across all journal entries:
+- **query** (required): Natural language search query
+- **limit**: Maximum results (default: 10)
+- **type**: Search scope - 'project', 'user', or 'both' (default: 'both')
+- **sections**: Filter by specific categories
 
-- `diary_entry` (string, required): A block of text containing private thoughts and feelings
+### `read_journal_entry`
+Read full content of specific entries:
+- **path** (required): File path from search results
+
+### `list_recent_entries`
+Browse recent entries chronologically:
+- **limit**: Maximum entries (default: 10)
+- **type**: Entry scope - 'project', 'user', or 'both' (default: 'both')
+- **days**: Days back to search (default: 30)
 
 ## File Structure
 
+### Project Journal (per project)
 ```
 .private-journal/
-├── 2025-05-27/
-│   ├── 14-30-45-123456.md
-│   ├── 15-42-10-789012.md
-│   └── ...
-├── 2025-05-28/
+├── 2025-05-31/
+│   ├── 14-30-45-123456.md          # Project notes entry
+│   ├── 14-30-45-123456.embedding   # Search index
 │   └── ...
 ```
 
-Each markdown file contains:
+### User Journal (global)
+```
+~/.private-journal/
+├── 2025-05-31/
+│   ├── 14-32-15-789012.md          # Personal thoughts entry
+│   ├── 14-32-15-789012.embedding   # Search index
+│   └── ...
+```
+
+### Entry Format
+Each markdown file contains YAML frontmatter and structured sections:
 
 ```markdown
-# 2:30:45 PM - May 27, 2025
+---
+title: "2:30:45 PM - May 31, 2025"
+date: 2025-05-31T14:30:45.123Z
+timestamp: 1717160645123
+---
 
-[journal entry content]
+## Feelings
+
+I'm excited about this new search feature...
+
+## Technical Insights
+
+Vector embeddings provide semantic understanding...
 ```
 
 ## Development
@@ -108,6 +157,22 @@ npm test
 ```bash
 npm run dev
 ```
+
+### Improving Claude's Performance
+
+To help Claude learn and improve over time, consider adding journal usage guidance to your `~/.claude/CLAUDE.md` file:
+
+```markdown
+## Learning and Memory Management
+
+- YOU MUST use the journal tool frequently to capture technical insights, failed approaches, and user preferences
+- Before starting complex tasks, search the journal for relevant past experiences and lessons learned
+- Document architectural decisions and their outcomes for future reference
+- Track patterns in user feedback to improve collaboration over time
+- When you notice something that should be fixed but is unrelated to your current task, document it in your journal rather than fixing it immediately
+```
+
+This enables Claude to build persistent memory across conversations, leading to better engineering decisions and collaboration patterns.
 
 ## Author
 
