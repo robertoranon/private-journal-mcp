@@ -23,31 +23,9 @@ A comprehensive MCP (Model Context Protocol) server that provides Claude with pr
 
 ## Installation
 
-```bash
-npm install -g private-journal-mcp
-```
+This server is run directly from GitHub using `npx` - no installation required.
 
-Or install locally:
-
-```bash
-npm install private-journal-mcp
-```
-
-## Usage
-
-### Basic Usage
-```bash
-private-journal-mcp
-```
-
-This creates journal entries in `.private-journal/` in the current working directory.
-
-### Custom Journal Path
-```bash
-private-journal-mcp --journal-path /path/to/my/journal
-```
-
-### MCP Configuration
+## MCP Configuration
 
 #### Claude Code (One-liner)
 ```bash
